@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SEFCAL App | Power & Security</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-blue: #0082f3;
+            --primary-pink: #ff2e95;
+            --bg-dark: #050506; /* أغمق لزيادة التباين */
+            --card-bg: rgba(22, 22, 24, 0.6);
+            --text-white: #ffffff;
+            --text-gray: #a0a0a5;
+        }
+
+        /* إخفاء شريط التمرير لإعطاء إحساس التطبيق */
+        ::-webkit-scrollbar { display: none; }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-white);
+            overflow-x: hidden;
+            padding-bottom: 100px;
+            line-height: 1.9; /* حل مشكلة تداخل الكلام */
+            font-size: 0.95rem;
+        }
+
+        /* --- Splash Screen (شاشة التحميل) --- */
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        .splash-logo {
+            width: 150px;
+            animation: pulse 1.5s infinite alternate;
+        }
+        .loader-bar {
+            width: 100px; height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px; margin-top: 20px;
+            overflow: hidden; position: relative;
+        }
+        .loader-bar::after {
+            content: ''; position: absolute;
+            top: 0; left: 0; height: 100%; width: 50%;
+            background: linear-gradient(90deg, var(--primary-blue), var(--primary-pink));
+            animation: loading 1s infinite linear;
+        }
+        @keyframes loading { 0% { left: -50%; } 100% { left: 100%; } }
+        @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 100% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 15px var(--primary-blue)); } }
+
+        /* --- الأشكال الدائرية الخلفية --- */
+        .circle-decoration {
+            position: fixed; z-index: -1; border-radius: 50%; filter: blur(70px); opacity: 0.4;
+        }
+        .circle-pink { width: 300px; height: 300px; background: var(--primary-pink); top: -50px; right: -100px; animation: float 6s ease-in-out infinite; }
+        .circle-blue { width: 300px; height: 300px; background: var(--primary-blue); bottom: 100px; left: -100px; animation: float 8s ease-in-out infinite reverse; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(30px); } 100% { transform: translateY(0px); } }
+
+        /* --- Header --- */
+        header {
+            padding: 15px 20px;
+            text-align: center;
+            background: rgba(5, 5, 6, 0.7);
+            backdrop-filter: blur(15px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .app-logo { height: 45px; }
+
+        /* --- Cover Section --- */
+        .hero-cover {
+            width: 100%; padding: 15px; margin-bottom: 10px;
+        }
+        .cover-img {
+            width: 100%; height: auto; border-radius: 20px;
+            display: block;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- Container & App Cards (Glassmorphism) --- */
+        .container { padding: 10px 15px; }
+        section { scroll-margin-top: 80px; }
+
+        .app-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 25px 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: translateY(40px) scale(0.95);
+            opacity: 0;
+            transition: all 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* حركة مرنة احترافية */
+        }
+        .app-card.show { transform: translateY(0) scale(1); opacity: 1; }
+
+        .card-title {
+            font-size: 1.5rem; margin-bottom: 25px;
+            display: flex; align-items: center; gap: 12px;
+            font-weight: 800;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .card-title i { 
+            color: var(--primary-pink); 
+            background: rgba(255, 46, 149, 0.1);
+            padding: 10px; border-radius: 12px;
+        }
+
+        /* --- Lists Styling (حل مشكلة التداخل) --- */
+        .info-group { margin-bottom: 30px; }
+        .sub-heading {
+            font-size: 1.25rem; color: var(--primary-blue);
+            margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-weight: 700;
+        }
+        .feature-list { list-style: none; }
+        .feature-list li {
+            position: relative;
+            padding-right: 35px; /* مساحة أكبر للأيقونة */
+            margin-bottom: 18px; /* مسافة ممتازة بين السطور */
+            color: var(--text-gray);
+            background: rgba(255,255,255,0.02);
+            padding-top: 10px; padding-bottom: 10px; padding-left: 10px;
+            border-radius: 12px;
+            transition: 0.3s;
+        }
+        .feature-list li:hover { background: rgba(255,255,255,0.05); transform: translateX(-5px); }
+        .feature-list li::before {
+            content: '\f058'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+            position: absolute; right: 10px; top: 12px;
+            color: var(--primary-blue); font-size: 1.1rem;
+        }
+
+        /* --- Why Us Grid (تصميم احترافي مطابق لطلبك) --- */
+        .why-us-grid {
+            display: grid; grid-template-columns: 1fr; gap: 12px;
+        }
+        .why-us-item {
+            background: #1a1a1c;
+            padding: 15px 45px 15px 15px;
+            border-radius: 16px;
+            font-weight: 600;
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.04);
+            display: flex; align-items: center;
+            opacity: 0; transform: translateX(30px);
+            transition: all 0.5s ease;
+        }
+        .why-us-item.show-item { opacity: 1; transform: translateX(0); }
+        .why-us-item i {
+            position: absolute; right: 15px;
+            color: var(--primary-pink); font-size: 1.2rem;
+        }
+
+        /* --- Horizontal Scroll (تصميم أبلكيشن لمنتجات الكاميرات) --- */
+        .horizontal-scroll-wrapper {
+            display: flex; gap: 15px;
+            overflow-x: auto; padding-bottom: 15px;
+            scroll-snap-type: x mandatory;
+        }
+        .h-scroll-item {
+            min-width: 220px;
+            background: #111; border-radius: 20px; padding: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+            scroll-snap-align: center;
+        }
+        .h-scroll-item img {
+            width: 100%; border-radius: 15px; margin-bottom: 10px;
+        }
+
+        /* --- STABILIZERS SECTION --- */
+        .section-title-glow {
+            text-align: center; font-size: 1.8rem; margin: 2rem 0; font-weight: 800;
+            background: linear-gradient(90deg, var(--text-white), var(--text-gray));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        
+        .original-group-card { 
+            background: var(--card-bg); backdrop-filter: blur(10px);
+            border-radius: 24px; margin-bottom: 20px; overflow: hidden; 
+            border: 1px solid rgba(255,255,255,0.08); 
+            opacity: 0; transform: translateY(30px); transition: 0.6s;
+        }
+        .original-group-card.show { opacity: 1; transform: translateY(0); }
+        .original-group-header { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .model-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+        .model-chip { 
+            background: rgba(0, 130, 243, 0.15); border: 1px solid var(--primary-blue);
+            padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: var(--text-white); 
+        }
+        .original-group-image { 
+            padding: 20px; display: flex; justify-content: center; align-items: center; 
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        }
+        .original-group-image img { max-width: 80%; border-radius: 15px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
+        .original-group-desc { padding: 15px; font-size: 0.9rem; color: var(--text-gray); }
+
+        /* --- Contact Icons (تفاعلية) --- */
+        .social-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .social-btn { 
+            height: 65px; border-radius: 20px; display: flex; justify-content: center; align-items: center; 
+            font-size: 1.8rem; color: white; text-decoration: none; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; overflow: hidden;
+        }
+        .btn-fb { background: linear-gradient(135deg, #1877F2, #0d5aeb); }
+        .btn-ig { background: linear-gradient(45deg, #f09433, #dc2743, #bc1888); }
+        .btn-wa { background: linear-gradient(135deg, #25D366, #128C7E); }
+        
+        /* تأثير التموج (Ripple) */
+        .ripple {
+            position: absolute; border-radius: 50%; transform: scale(0);
+            animation: ripple-anim 0.6s linear; background: rgba(255, 255, 255, 0.4);
+        }
+        @keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+        .contact-details p { 
+            background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px;
+            margin-bottom: 10px; display: flex; align-items: center; gap: 12px; color: var(--text-gray);
+        }
+        .contact-details i { color: var(--primary-pink); background: rgba(255,46,149,0.1); padding: 8px; border-radius: 50%; }
+
+        /* --- Bottom Navigation --- */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 5%; right: 5%; width: 90%;
+            background: rgba(15, 15, 18, 0.85); backdrop-filter: blur(20px);
+            height: 70px; border-radius: 35px;
+            display: flex; justify-content: space-around; align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 1000;
+        }
+        .nav-item {
+            color: #666; text-decoration: none; display: flex; flex-direction: column; align-items: center;
+            font-size: 0.75rem; font-weight: 600; transition: 0.4s; position: relative; width: 60px;
+        }
+        .nav-item i { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.3s; }
+        .nav-item.active { color: var(--primary-blue); }
+        .nav-item.active i { transform: translateY(-5px); color: var(--text-white); }
+        .nav-item.active::after {
+            content: ''; position: absolute; bottom: -8px; width: 5px; height: 5px;
+            background: var(--primary-blue); border-radius: 50%; box-shadow: 0 0 10px var(--primary-blue);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <img src="LOGO.PNG" alt="SEFCAL" class="splash-logo" onerror="this.src='https://placehold.co/150x50/0a0a0b/0082f3?text=SEFCAL'">
+        <div class="loader-bar"></div>
+    </div>
+
+    <div class="circle-decoration circle-pink"></div>
+    <div class="circle-decoration circle-blue"></div>
+
+    <header>
+        <img src="LOGO.PNG" alt="SEFCAL" class="app-logo" onerror="this.src='https://placehold.co/150x50/0a0a0b/0082f3?text=SEFCAL'">
+    </header>
+
+    <section class="hero-cover" id="home">
+        <img src="caver.jpg" alt="SEFCAL Cover" class="cover-img" onerror="this.onerror=null; this.src='https://placehold.co/800x400/161618/0082f3?text=Cover+Image';">
+    </section>
+
+    <main class="container">
+        
+        <section id="about">
+            <div class="app-card">
+                <div class="card-title">
+                    <i class="fas fa-building"></i>
+                    <h2>من نحن</h2>
+                </div>
+                
+                <div class="info-group">
+                    <h3 class="sub-heading"><i class="fas fa-eye"></i> رؤيتنا</h3>
+                    <ul class="feature-list">
+                        <li>أن نصبح العلامة التجارية المصرية الرائدة في مجال أنظمة الطاقة المتكاملة والتقنيات الذكية (IoT) من خلال الابتكار والتميز الهندسي.</li>
+                        <li>دفع بنية تحتية أكثر ذكاءً وتقديم حلول موثوقة للقطاعات الصناعية والتجارية في الشرق الأوسط.</li>
+                    </ul>
+                </div>
+
+                <div class="info-group">
+                    <h3 class="sub-heading"><i class="fas fa-bullseye"></i> مهمتنا</h3>
+                    <ul class="feature-list">
+                        <li>تقديم حلول هندسية متكاملة في المحولات، منظمات الجهد، وأنظمة المراقبة.</li>
+                        <li>دمج الابتكار والهندسة الذكية لدعم مختلف القطاعات بحلول جاهزة للمستقبل.</li>
+                        <li>بناء شراكات طويلة الأمد من خلال الثقة والخدمة الاحترافية.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="app-card" id="why-us-card">
+                <div class="card-title">
+                    <i class="fas fa-star"></i>
+                    <h2>لماذا تختار SEFCAL؟</h2>
+                </div>
+                <div class="why-us-grid">
+                    <div class="why-us-item"><i class="fas fa-check-circle"></i> معايير جودة عالية</div>
+                    <div class="why-us-item"><i class="fas fa-check-circle"></i> حلول هندسية موثوقة</div>
+                    <div class="why-us-item"><i class="fas fa-check-circle"></i> دعم فني احترافي</div>
+                    <div class="why-us-item"><i class="fas fa-check-circle"></i> تقنيات ذكية وحديثة</div>
+                    <div class="why-us-item"><i class="fas fa-check-circle"></i> أسعار تنافسية</div>
+                    <div class="why-us-item"><i class="fas fa-shield-alt" style="color:var(--primary-blue)"></i> ضمان لمدة عامين</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="products">
+            <h2 class="section-title-glow">منظمات الجهد</h2>
+
+            <div class="original-group-card"><div class="original-group-header"><div class="model-badges"><span class="model-chip">ES-2K-A</span><span class="model-chip">ES-3K-A</span></div></div><div class="original-group-image"><img src="1.PNG" alt="ES" onerror="this.src='https://placehold.co/300x200/1e1e1e/0082f3?text=ES-Series';"></div><div class="original-group-desc">مثالي للمنازل والمكاتب الصغيرة، حماية ذكية من الحمل الزائد.</div></div>
+            <div class="original-group-card"><div class="original-group-header"><div class="model-badges"><span class="model-chip">ES-5K Series</span></div></div><div class="original-group-image"><img src="3.PNG" alt="5KVA" onerror="this.src='https://placehold.co/300x200/1e1e1e/ff2e95?text=5KVA';"></div><div class="original-group-desc">تنظيم متقدم للطاقة، مناسب للأحمال المتوسطة.</div></div>
+            <div class="original-group-card"><div class="original-group-header"><div class="model-badges"><span class="model-chip">ES-10K Series</span></div></div><div class="original-group-image"><img src="4.PNG" alt="10KVA" onerror="this.src='https://placehold.co/300x200/1e1e1e/0082f3?text=10KVA';"></div><div class="original-group-desc">تحكم دقيق وتبريد ذاتي للمواقع التجارية.</div></div>
+            <div class="original-group-card"><div class="original-group-header"><div class="model-badges"><span class="model-chip">ES-40K Pro</span></div></div><div class="original-group-image"><img src="10.PNG" alt="40KVA" onerror="this.src='https://placehold.co/300x200/1e1e1e/ff2e95?text=40KVA+IoT';"></div><div class="original-group-desc">أحدث منظمات الجهد بدعم إنترنت الأشياء (IoT) والتشخيص عن بُعد.</div></div>
+
+            <div class="app-card">
+                <div class="card-title">
+                    <i class="fas fa-camera"></i>
+                    <h2>الأنظمة الأمنية الذكية</h2>
+                </div>
+                <div class="horizontal-scroll-wrapper">
+                    <div class="h-scroll-item"><img src="1S.PNG" onerror="this.src='https://placehold.co/200x150/111/0082f3?text=Camera+1'"><p style="text-align:center; font-size:0.8rem; color:#aaa;">كاميرات داخلية</p></div>
+                    <div class="h-scroll-item"><img src="2S.PNG" onerror="this.src='https://placehold.co/200x150/111/ff2e95?text=Camera+2'"><p style="text-align:center; font-size:0.8rem; color:#aaa;">كاميرات خارجية</p></div>
+                    <div class="h-scroll-item"><img src="3S.PNG" onerror="this.src='https://placehold.co/200x150/111/fff?text=Camera+3'"><p style="text-align:center; font-size:0.8rem; color:#aaa;">أنظمة متكاملة</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact">
+            <div class="app-card">
+                <div class="card-title">
+                    <i class="fas fa-headset"></i>
+                    <h2>تواصل معنا</h2>
+                </div>
+                <div class="contact-details">
+                    <p><i class="fas fa-phone"></i> 01028153811</p>
+                    <p><i class="fas fa-mobile-alt"></i> 01092210039</p>
+                    <p><i class="fas fa-envelope"></i> sefcalstore20@gmail.com</p>
+                    <p><i class="fas fa-map-marker-alt"></i> المحلة الكبرى، دمرو، مصر</p>
+                </div>
+                <div class="social-grid">
+                    <a href="#" class="social-btn btn-fb"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="social-btn btn-ig"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-btn btn-wa"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="#home" class="nav-item active"><i class="fas fa-home"></i><span>الرئيسية</span></a>
+        <a href="#about" class="nav-item"><i class="fas fa-info-circle"></i><span>عنا</span></a>
+        <a href="#products" class="nav-item"><i class="fas fa-microchip"></i><span>المنتجات</span></a>
+        <a href="#contact" class="nav-item"><i class="fas fa-headset"></i><span>التواصل</span></a>
+    </nav>
+
+    <script>
+        // 1. Splash Screen Logic
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.style.opacity = '0';
+                setTimeout(() => splash.style.display = 'none', 600);
+            }, 1500); // الشاشة هتختفي بعد ثانية ونص
+        });
+
+        // 2. Intersection Observer المتقدم (لظهور الكروت والعناصر بالتدريج)
+        const observerOptions = { threshold: 0.15, rootMargin: '0px 0px -50px 0px' };
+        
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                    
+                    // لو الكارت هو الخاص بـ "لماذا نحن"، أظهر العناصر جواه بالتدريج
+                    if(entry.target.id === 'why-us-card') {
+                        const items = entry.target.querySelectorAll('.why-us-item');
+                        items.forEach((item, index) => {
+                            setTimeout(() => {
+                                item.classList.add('show-item');
+                            }, index * 150); // تأخير زمني بين كل عنصر واللي بعده
+                        });
+                    }
+                    cardObserver.unobserve(entry.target); // تشغيل الحركة مرة واحدة فقط
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.app-card, .original-group-card').forEach(card => {
+            cardObserver.observe(card);
+        });
+
+        // 3. Bottom Nav Active State & Smooth Scrolling
+        const navItems = document.querySelectorAll('.bottom-nav .nav-item');
+        const sections = document.querySelectorAll('section[id]');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                // إضافة تأثير اهتزاز خفيف عند الضغط (Haptic feedback simulation)
+                if (navigator.vibrate) navigator.vibrate(50); 
+
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // تحديث الـ Nav بناءً على الـ Scroll
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // 4. Ripple Effect للأزرار (تأثير الضغط زي الموبايل)
+        const buttons = document.querySelectorAll('.social-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                let x = e.clientX - e.target.getBoundingClientRect().left;
+                let y = e.clientY - e.target.getBoundingClientRect().top;
+                
+                let ripples = document.createElement('span');
+                ripples.style.left = x + 'px';
+                ripples.style.top = y + 'px';
+                ripples.classList.add('ripple');
+                this.appendChild(ripples);
+                
+                setTimeout(() => ripples.remove(), 600);
+            });
+        });
+    </script>
+</body>
+</html>
